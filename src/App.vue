@@ -45,7 +45,7 @@ const examSize = ref(10)     // 模擬考題數 (可變動)
 const randomMode = ref(true) // 是否隨機出題
 
 onMounted(async () => {
-  const res = await fetch('/questions.json')
+  const res = await fetch('./questions.json')
   const data = await res.json()
   allQuestions.value = data
   resetPractice()
