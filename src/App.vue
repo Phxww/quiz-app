@@ -119,7 +119,7 @@ function nextQuestion() {
       </button>
 
       <!-- 隨機/順序切換 -->
-      <label class="flex items-center gap-2 ml-2">
+      <label class="flex items-center gap-2 ml-2 text-white">
         <input type="checkbox" v-model="randomMode" @change="resetPractice" />
         隨機出題
       </label>
@@ -145,7 +145,11 @@ function nextQuestion() {
       <div v-if="showAnswer" class="mt-4 ">
         <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p>
         <p class="text-sm text-green-700 text-left mb-2">👉 為什麼正確: {{ questions[current].why_correct }}</p>
-        <p class="text-sm text-red-700 text-left">❌ 錯誤原因: {{ questions[current].why_others_wrong?.join('；') }}</p>
+        <p class="text-sm text-red-700 text-left">❌ 錯誤原因: 
+          <div v-for="(reason, index) in questions[current].why_others_wrong" :key="index">
+            <p>{{ reason }}</p>
+          </div>
+        </p>
         <!-- <p class="text-sm text-red-700"> 為什麼對: {{ questions[current].detailed_reasoning?.join('；') }}</p> -->
 
         <button class="mt-4 p-2 bg-blue-500 text-white rounded" @click="nextQuestion">
