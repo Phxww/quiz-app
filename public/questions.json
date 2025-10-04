@@ -27,11 +27,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) A is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option A is correct because it associates the private hosted zone with every VPC that needs to resolve cloud.example.com and uses a Route 53 Resolver inbound endpoint (managed service) to accept DNS queries from on-premises. Using Transit Gateway to attach VPCs provides a low-latency, high-performance network path from on-premises to the shared services VPC.",
     "why_others_wrong": [
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option B: Running an EC2-based conditional forwarder introduces undifferentiated operational overhead, single points of failure and extra maintenance compared with the managed Route 53 Resolver inbound endpoint.",
+      "Option C: An outbound resolver is for queries originating from inside AWS to on-premises — it does not let on-premises systems resolve private hosted zone names in AWS.",
+      "Option D: If the private hosted zone is associated only with the shared services VPC, other VPCs will not be able to resolve the records unless additional association or forwarding is configured; associating the zone to every VPC (or using shared associations) is required for highest performance."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -40,11 +40,21 @@
           "text": "Associate the private hosted zone to all the VPCs. Create a Route 53 inbound resolver in the shared services VPC. Attach all VPCs to the transit gateway and create forwarding rules in the on-premises DNS server for cloud.example.com that point to the inbound resolver.",
           "is_correct": true,
           "reasoning": [
-            "✅ Provides network-level security through VPC and security groups"
+            "Private hosted zones are only visible to VPCs they are associated with — associating the zone to every VPC ensures direct resolution without extra hops.",
+            "Route 53 Resolver inbound endpoints are the managed, supported way to accept DNS queries from on‑premises into Route 53 private hosted zones.",
+            "Transit Gateway gives a scalable, high-throughput, low-latency path between on‑premises (via Direct Connect) and the shared services VPC hosting the inbound endpoint."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "Route 53 Resolver inbound endpoint",
+              "Route 53 private hosted zone",
+              "Transit Gateway"
+            ],
+            "configurations": [
+              "Associate private hosted zone to required VPCs",
+              "Create inbound resolver and advertise IPs to on-prem DNS",
+              "Transit Gateway attachments"
+            ],
             "status": "Correct Solution"
           }
         },
@@ -53,14 +63,16 @@
           "text": "Associate the private hosted zone to all the VPCs. Deploy an Amazon EC2 conditional forwarder in the shared services VPC. Attach all VPCs to the transit gateway and create forwarding rules in the on-premises DNS server for cloud.example.com that point to the conditional forwarder.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "An EC2-based DNS forwarder works but is self-managed (patching, HA, scaling) and adds operational overhead.",
+            "It is more likely to become a single point of failure unless you build HA, and performance is limited by instance size and network path."
           ],
           "key_points": {
             "services": [
-              "EC2"
+              "EC2 (self-managed DNS)"
             ],
-            "configurations": [],
+            "configurations": [
+              "Requires HA, monitoring, scaling"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -69,12 +81,16 @@
           "text": "Associate the private hosted zone to the shared services VPC. Create a Route 53 outbound resolver in the shared services VPC. Attach all VPCs to the transit gateway and create forwarding rules in the on-premises DNS server for cloud.example.com that point to the outbound resolver.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Outbound endpoints are for forwarding queries from AWS to on‑premises DNS — they do not accept queries from on‑premises into Route 53.",
+            "Therefore this option does not satisfy the requirement that on‑premises systems should be able to resolve cloud.example.com."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "Route 53 Resolver outbound endpoint"
+            ],
+            "configurations": [
+              "Not applicable for on-prem → AWS queries"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -83,47 +99,54 @@
           "text": "Associate the private hosted zone to the shared services VPC. Create a Route 53 inbound resolver in the shared services VPC. Attach the shared services VPC to the transit gateway and create forwarding rules in the on-premises DNS server for cloud.example.com that point to the inbound resolver.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "If the private hosted zone is associated only to the shared services VPC, other VPCs won't automatically see the private records unless the zone is associated to them or records are forwarded — that can add latency or complexity.",
+            "Associating the zone directly to all VPCs that need it is higher performance and simpler operationally."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "Route 53 Resolver inbound endpoint",
+              "Route 53 private hosted zone"
+            ],
+            "configurations": [
+              "Associating private zone only to one VPC is insufficient for multi‑VPC visibility"
+            ],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option A: Provides network-level security through VPC and security groups"
+          "Option A uses the managed Route 53 Resolver inbound endpoint so on‑premises systems can query AWS private hosted zones; associating the private hosted zone to all VPCs provides the most direct, highest-performance resolution for all VPCs.",
+          "It minimizes operational overhead compared with self-managed EC2 forwarders and uses the Transit Gateway for scalable network connectivity."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Confusing inbound vs outbound Route 53 Resolver endpoints (C is outbound, not for on‑prem → AWS).",
+          "Assuming that associating a private zone to a single VPC or using EC2 forwarders is equivalent in performance and manageability to using the Resolver inbound endpoint."
         ],
         "key_decision_factors": [
-          "High availability and fault tolerance",
-          "Security and compliance requirements"
+          "visibility of private hosted zones to VPCs",
+          "managed service vs self-managed",
+          "network latency and path via Transit Gateway"
         ]
       },
       "requirements_identified": {
-        "performance": [],
+        "performance": [
+          "low_latency_resolution_for_all_vpcs"
+        ],
         "availability": [
-          "disaster_recovery"
+          "use_managed_service_to_reduce_single_points_of_failure"
         ],
-        "scalability": [],
+        "scalability": [
+          "support_multiple_vpcs"
+        ],
         "security": [
-          "network_isolation"
+          "private_hosted_zone_visibility_controlled_via_vpc_associations"
         ],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": [
-          "hybrid_integration"
+        "cost": [
+          "minimize_operational_cost_by_avoiding_self-managed_dns"
         ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Applied Route 53 Resolver semantics and standard multi‑VPC networking best practices."
     }
   },
   {
@@ -154,11 +177,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) C is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option C is correct because Route 53 failover routing (with health checks and target health monitoring) provides an explicit primary→secondary failover model for API endpoints, and converting DynamoDB to global tables ensures data is replicated to the failover Region. Deploying API Gateway and Lambda in the secondary Region creates a ready warm endpoint to switch traffic to.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Edge‑optimized or CloudFront‑backed API Gateway cannot magically target Lambda functions in two Regions as a single endpoint; it doesn't provide a clean managed primary/secondary failover for API Gateway endpoints.",
+      "Option B: Multivalue answers provide simple DNS-based load distribution among healthy endpoints, but they don't provide an explicit single-primary failover policy; they also complicate deterministic failover.",
+      "Option D: \"Global\" Lambda functions do not exist — Lambda must be deployed to each Region. The phrasing is misleading and implementing multivalue answers without explicit failover semantics is inferior."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -167,15 +190,14 @@
           "text": "Deploy a new set of Lambda functions in a new Region. Update the API Gateway API to use an edge-optimized API endpoint with Lambda functions from both Regions as targets. Convert the DynamoDB tables to global tables.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Edge‑optimized API Gateway endpoints are not a mechanism to register Lambda targets across Regions; you still must deploy regional APIs and coordinate them. This option conflates features and is operationally unclear."
           ],
           "key_points": {
             "services": [
+              "API Gateway",
               "Lambda",
-              "DynamoDB"
+              "DynamoDB Global Tables"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -184,15 +206,12 @@
           "text": "Deploy a new API Gateway API and Lambda functions in another Region. Change the Route 53 DNS record to a multivalue answer. Add both API Gateway APIs to the answer. Enable target health monitoring. Convert the DynamoDB tables to global tables.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Multivalue answers distribute traffic among multiple healthy endpoints rather than providing a primary->secondary failover behavior; it may result in split traffic and is not the deterministic failover the question asks for."
           ],
           "key_points": {
             "services": [
-              "Lambda",
-              "DynamoDB"
+              "Route 53 multivalue routing"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -201,14 +220,16 @@
           "text": "Deploy a new API Gateway API and Lambda functions in another Region. Change the Route 53 DNS record to a failover record. Enable target health monitoring. Convert the DynamoDB tables to global tables.",
           "is_correct": true,
           "reasoning": [
-            "✅ Includes proper monitoring and logging capabilities"
+            "Failover routing lets you declare a primary and secondary endpoint and automatically fail to the secondary when health checks fail.",
+            "DynamoDB global tables replicate data across Regions so the secondary Region has up‑to‑date data for read/write or for promotion depending on design."
           ],
           "key_points": {
             "services": [
+              "API Gateway",
               "Lambda",
-              "DynamoDB"
+              "Route 53 failover",
+              "DynamoDB Global Tables"
             ],
-            "configurations": [],
             "status": "Correct Solution"
           }
         },
@@ -217,41 +238,42 @@
           "text": "Deploy a new API Gateway API in a new Region. Change the Lambda functions to global functions. Change the Route 53 DNS record to a multivalue answer. Add both API Gateway APIs to the answer. Enable target health monitoring. Convert the DynamoDB tables to global tables.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "There is no concept of \"global Lambda functions\" — you must deploy Lambdas per Region. Also using multivalue does not provide primary/secondary failover semantics."
           ],
           "key_points": {
             "services": [
               "Lambda",
-              "DynamoDB"
+              "Route 53"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option C: Includes proper monitoring and logging capabilities"
+          "Option C provides explicit primary/secondary failover semantics with Route 53 health checks and failover routing, plus global tables for DynamoDB replication so the secondary Region has relevant data."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Mixing multivalue routing with failover expectations (B) or assuming a cross‑Region single endpoint for Lambda (A, D)."
         ],
-        "key_decision_factors": []
+        "key_decision_factors": [
+          "deterministic failover behavior",
+          "data replication between Regions",
+          "operational simplicity"
+        ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "availability": [
+          "regional_failover"
+        ],
+        "operational": [
+          "health_checks_and_promotion"
+        ],
+        "data": [
+          "cross_region_replication"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Routing behavior of Route 53 and DynamoDB global tables as documented by AWS."
     }
   },
   {
@@ -282,11 +304,11 @@
     "topic": "AWS SAP-C02",
     "category": "new-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) D is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option D is correct because organization-level (root) deny SCPs apply to all child OUs and accounts; to onboard a new account without the restrictive deny, create a temporary Onboarding OU and move the organization's restrictive root SCP down to the Production OU so that the Onboarding OU is not blocked. Apply an SCP to the Onboarding OU that permits the AWS Config actions temporarily. After configuration, move the new account into Production and reapply the intended SCP placement.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Removing root SCPs globally is disruptive and reduces centralized control; using Service Catalog alone does not address the SCP deny preventing the account from making changes.",
+      "Option B: Simply creating an Onboarding OU and applying a permissive SCP will not override a deny at the root — root SCPs are inherited and deny cannot be overridden by a lower-level allow.",
+      "Option C: Converting root deny lists to allow lists and applying temporary SCPs at the root is risky and increases long-term maintenance complexity; SCPs at root should be minimized."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -295,12 +317,13 @@
           "text": "Remove the organization’s root SCPs that limit access to AWS Config. Create AWS Service Catalog products for the company’s standard AWS Config rules and deploy them throughout the organization, including the new account.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Removing root SCPs is overly disruptive and removes centralized guardrails; Service Catalog does not override SCP denies."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "AWS Organizations",
+              "Service Catalog"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -309,12 +332,12 @@
           "text": "Create a temporary OU named Onboarding for the new account. Apply an SCP to the Onboarding OU to allow AWS Config actions. Move the new account to the Production OU when adjustments to AWS Config are complete.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "If the root SCP denies access, child OU SCPs cannot grant permissions that are denied at the root. This would not solve the problem unless the root's deny is moved or removed."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "AWS Organizations SCPs"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -323,12 +346,12 @@
           "text": "Convert the organization’s root SCPs from deny list SCPs to allow list SCPs to allow the required services only. Temporarily apply an SCP to the organization’s root that allows AWS Config actions for principals only in the new account.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Converting to allow-lists is a large change that may unintentionally open services across the organization and increases long-term maintenance burden."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "AWS Organizations SCPs"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -337,41 +360,39 @@
           "text": "Create a temporary OU named Onboarding for the new account. Apply an SCP to the Onboarding OU to allow AWS Config actions. Move the organization’s root SCP to the Production OU. Move the new account to the Production OU when adjustments to AWS Config are complete.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "Move the restrictive root SCP so it no longer applies to the Onboarding OU; apply a targeted allow SCP to Onboarding so administrators can make required AWS Config changes without permanently weakening organization-wide controls."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "AWS Organizations SCPs",
+              "Organizational Units"
+            ],
             "status": "Correct Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option D: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option D: Provides the optimal balance of performance, availability, security, and cost"
+          "Option D enables temporary, minimal-scoped exceptions while preserving long-term governance by not loosening root policies permanently."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question"
+          "Assuming child SCPs can override a parent deny (B), or that removing root SCPs is acceptable (A)."
         ],
-        "key_decision_factors": []
-      },
-      "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": [
-          "hybrid_integration"
+        "key_decision_factors": [
+          "least-privilege governance",
+          "temporary scoped exceptions for onboarding",
+          "minimize long-term maintenance"
         ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "requirements_identified": {
+        "security": [
+          "organizational_governance"
+        ],
+        "operational": [
+          "onboarding_with_minimal_change"
+        ]
+      },
+      "analysis_assumption": "SCP evaluation and inheritance semantics in AWS Organizations."
     }
   },
   {
@@ -402,11 +423,10 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) C is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option C is correct because enabling Aurora Auto Scaling for replicas allows the read layer of Aurora to scale out for increased read traffic, and using an Application Load Balancer with sticky sessions preserves session affinity for a stateful application while allowing the application tier to scale horizontally.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Network Load Balancer does not support HTTP-level cookie stickiness the way ALB does; NLB targets lower‑level TCP and is less suited for session cookie stickiness and HTTP routing.",
+      "Option B and D: Scaling the writer does not solve read scaling; Aurora writers are single-primary (writers) and scaling writes requires different architectures. Also NLB is less appropriate than ALB for HTTP session affinity."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -415,14 +435,12 @@
           "text": "Enable Aurora Auto Scaling for Aurora Replicas. Use a Network Load Balancer with the least outstanding requests routing algorithm and sticky sessions enabled.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "NLB works at the connection level (L4) and doesn’t provide HTTP cookie-based sticky sessions; ALB is the correct choice for HTTP session affinity."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Auto Scaling enabled",
-              "Load balancing"
+            "services": [
+              "Aurora Replicas",
+              "NLB"
             ],
             "status": "Incorrect Solution"
           }
@@ -432,14 +450,12 @@
           "text": "Enable Aurora Auto Scaling for Aurora writers. Use an Application Load Balancer with the round robin routing algorithm and sticky sessions enabled.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Aurora writer endpoints cannot be auto-scaled horizontally in the same way as replicas; writers remain single-primary for writes. Scaling replicas is the appropriate strategy for read-heavy scaling."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Auto Scaling enabled",
-              "Load balancing"
+            "services": [
+              "Aurora writers",
+              "ALB"
             ],
             "status": "Incorrect Solution"
           }
@@ -449,14 +465,13 @@
           "text": "Enable Aurora Auto Scaling for Aurora Replicas. Use an Application Load Balancer with the round robin routing and sticky sessions enabled.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "Use Auto Scaling on Aurora replicas to add/remove read capacity depending on demand; this addresses database scaling.",
+            "Use ALB with sticky sessions to maintain a consistent user experience for the stateful application while allowing the app tier (EC2 Auto Scaling) to scale."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Auto Scaling enabled",
-              "Load balancing"
+            "services": [
+              "Aurora Replicas",
+              "ALB"
             ],
             "status": "Correct Solution"
           }
@@ -466,13 +481,12 @@
           "text": "Enable Aurora Scaling for Aurora writers. Use a Network Load Balancer with the least outstanding requests routing algorithm and sticky sessions enabled.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Scaling writer instances is not the intended pattern for Aurora; NLB is also not the right load balancer choice for HTTP session stickiness."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Load balancing"
+            "services": [
+              "Aurora writers",
+              "NLB"
             ],
             "status": "Incorrect Solution"
           }
@@ -480,29 +494,27 @@
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option C: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option C: Provides the optimal balance of performance, availability, security, and cost"
+          "Option C addresses read scaling (Aurora Replicas autoscaling) and session affinity at the HTTP layer (ALB), giving the best balanced approach for a stateful app that must scale."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Confusing writer scaling with reader scaling and choosing NLB where ALB is needed for HTTP session affinity."
         ],
-        "key_decision_factors": []
+        "key_decision_factors": [
+          "session_affinity",
+          "read_scaling_with_replicas",
+          "choice_of_load_balancer_for_HTTP"
+        ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
         "scalability": [
-          "auto_scaling"
+          "database_read_scaling",
+          "app_tier_scaling"
         ],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "operational": [
+          "preserve_user_experience_for_stateful_app"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Standard Aurora and ALB behavior for HTTP applications."
     }
   },
   {
@@ -533,11 +545,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) A is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option A is correct because CloudFront + CloudFront Functions (viewer‑request or viewer‑response) can inspect User‑Agent and remove problematic headers at the edge with minimal latency and operational overhead; using an ALB to front Lambda targets keeps the backend serverless while CloudFront handles header adjustments efficiently.",
     "why_others_wrong": [
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option B: API Gateway responses can be customized, but API Gateway may add cost and latency and is not ideal when the service already uses Lambda with ALB integration and when edge-level header modification is required for legacy devices.",
+      "Option C: HTTP API response mapping templates do not provide runtime header manipulation as flexibly as CloudFront Functions at the edge.",
+      "Option D: Lambda@Edge can perform the change but is heavier, more costly, and has a longer deploy/propagation model compared to CloudFront Functions which are designed for simple, high-performance header manipulation."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -546,14 +558,15 @@
           "text": "Create an Amazon CloudFront distribution for the metadata service. Create an Application Load Balancer (ALB). Configure the CloudFront distribution to forward requests to the ALB. Configure the ALB to invoke the correct Lambda function for each type of request. Create a CloudFront function to remove the problematic headers based on the value of the User-Agent header.",
           "is_correct": true,
           "reasoning": [
-            "✅ Leverages serverless architecture for reduced operational complexity"
+            "CloudFront Functions run at the edge with extremely low latency and are ideal for header inspection and modification (viewer-request/viewer-response).",
+            "Using ALB → Lambda keeps the backend serverless and decouples header stripping to the edge for older devices."
           ],
           "key_points": {
             "services": [
+              "CloudFront",
+              "CloudFront Functions",
+              "ALB",
               "Lambda"
-            ],
-            "configurations": [
-              "Load balancing"
             ],
             "status": "Correct Solution"
           }
@@ -563,14 +576,13 @@
           "text": "Create an Amazon API Gateway REST API for the metadata service. Configure API Gateway to invoke the correct Lambda function for each type of request. Modify the default gateway responses to remove the problematic headers based on the value of the User-Agent header.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "API Gateway can modify responses but it's heavier operationally and less optimal for edge-based user-agent header stripping for very large, globally distributed device populations."
           ],
           "key_points": {
             "services": [
+              "API Gateway",
               "Lambda"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -579,14 +591,12 @@
           "text": "Create an Amazon API Gateway HTTP API for the metadata service. Configure API Gateway to invoke the correct Lambda function for each type of request. Create a response mapping template to remove the problematic headers based on the value of the User-Agent. Associate the response data mapping with the HTTP API.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "HTTP API mapping templates are more limited and do not operate at the CDN edge; CloudFront Functions are a lighter-weight, lower-latency solution for header manipulation."
           ],
           "key_points": {
             "services": [
-              "Lambda"
+              "API Gateway HTTP API"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -595,15 +605,12 @@
           "text": "Create an Amazon CloudFront distribution for the metadata service. Create an Application Load Balancer (ALB). Configure the CloudFront distribution to forward requests to the ALB. Configure the ALB to invoke the correct Lambda function for each type of request. Create a Lambda@Edge function that will remove the problematic headers in response to viewer requests based on the value of the User-Agent header.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Lambda@Edge can do this, but CloudFront Functions are specifically optimized for simple header operations (cheaper, lower latency, faster publishes). Lambda@Edge is heavier and has a different operational lifecycle."
           ],
           "key_points": {
             "services": [
-              "Lambda"
-            ],
-            "configurations": [
-              "Load balancing"
+              "CloudFront",
+              "Lambda@Edge"
             ],
             "status": "Incorrect Solution"
           }
@@ -611,32 +618,27 @@
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option A: Leverages serverless architecture for reduced operational complexity"
+          "CloudFront Functions + ALB + Lambda minimizes operational overhead, adds edge-level header manipulation for legacy devices, and preserves serverless backend design."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Choosing heavier compute (Lambda@Edge/API Gateway) for a lightweight header-modification requirement."
         ],
         "key_decision_factors": [
-          "Operational overhead and management complexity"
+          "latency",
+          "cost",
+          "operational overhead",
+          "ability to modify headers at CDN edge"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
         "operational": [
-          "low_operational_overhead"
+          "serverless_low_overhead"
         ],
-        "compliance": [],
-        "specific_constraints": [
-          "hybrid_integration"
+        "compatibility": [
+          "support_legacy_devices_via_user-agent_handling"
         ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "CloudFront Functions are available for header edit operations and ALB can forward to Lambda targets."
     }
   },
   {
@@ -671,12 +673,10 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) C is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Granting cross-account S3 access requires (1) a bucket policy on Account A that explicitly allows a principal from Account B (either the account, an IAM role, or a specific IAM user) to perform the needed S3 actions, and (2) IAM permissions in Account B for the principal (or an assume-role configuration) so that the user can exercise those permissions. The bucket owner must allow the other account/principal in the bucket policy and the consuming account must have a matching IAM policy or assume-role configuration.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option E: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A (CORS): CORS applies to browser-based cross-origin requests and does not grant cross-account IAM access for an IAM user to list/get objects programmatically.",
+      "Incorrect policies that do not name the correct principal, omit required actions (s3:GetObject, s3:ListBucket) or do not include the necessary conditions (e.g., specifying the exact account or role) will fail."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -685,14 +685,12 @@
           "text": "Turn on the cross-origin resource sharing (CORS) feature for the S3 bucket in Account A.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "CORS only affects browser-based requests and does not grant IAM principal-level cross-account access for an IAM user or role. It is not sufficient for the described requirement."
           ],
           "key_points": {
             "services": [
-              "S3"
+              "S3 CORS"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -701,14 +699,12 @@
           "text": "In Account A, set the S3 bucket policy to the following:",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "If the bucket policy does not include the correct principal (account B or the specific IAM role/user ARN) and proper actions, it will not allow access. The exact policy text matters."
           ],
           "key_points": {
             "services": [
-              "S3"
+              "S3 Bucket Policy"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -717,14 +713,12 @@
           "text": "In Account A, set the S3 bucket policy to the following:",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "A correctly written bucket policy in Account A that grants s3:GetObject (and s3:ListBucket if needed) to the principal in Account B is a required piece of the solution."
           ],
           "key_points": {
             "services": [
-              "S3"
+              "S3 Bucket Policy"
             ],
-            "configurations": [],
             "status": "Correct Solution"
           }
         },
@@ -733,12 +727,12 @@
           "text": "In Account B, set the permissions of User_DataProcessor to the following:",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "If the IAM user lacks appropriate IAM permissions to call S3 actions (or to assume a role that has those permissions), the cross-account bucket policy alone will not be sufficient."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "IAM"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -747,40 +741,37 @@
           "text": "In Account B, set the permissions of User_DataProcessor to the following:",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "If the permissions are incorrectly scoped (too narrow or missing required permissions like s3:GetObject), access will fail. The consumer account must also be configured correctly."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "IAM"
+            ],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option C: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option C: Provides the optimal balance of performance, availability, security, and cost"
+          "Cross-account S3 access requires a correctly scoped bucket policy in the bucket‑owning account and matching IAM permissions (or an assume-role flow) in the consuming account."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option E: This solution doesn't optimally address the specific requirements stated in the question"
+          "Confusing CORS with IAM authorization, omitting the principal or required actions in the bucket policy, or not granting the consuming IAM principal the right permissions."
         ],
-        "key_decision_factors": []
+        "key_decision_factors": [
+          "proper principal identification in bucket policy",
+          "least-privilege IAM permissions in consuming account"
+        ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "security": [
+          "least_privilege_access"
+        ],
+        "operational": [
+          "clear_principal_and_permissions"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Standard S3 cross-account access patterns (bucket policy + IAM permissions) apply."
     }
   },
   {
@@ -811,11 +802,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) B is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option B (ECR + ECS Fargate) is correct because Fargate provides serverless container compute (no EC2 to manage), ECR stores images, ECS + Fargate lets you autoscale to the known min/max, and separating production and testing into different clusters or services keeps environments isolated while minimizing operational complexity compared with managing EKS or trying to run containers inside Lambda.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Lambda is not designed for arbitrary long-running container workloads and pushing complex container images into Lambda (container image support exists but is limited for microservice patterns, concurrency and operational cost may be suboptimal).",
+      "Option C: EKS provides more control but also substantially more operational overhead and cost than Fargate for this use case.",
+      "Option D: Elastic Beanstalk is not the best fit for container microservices in two separate environments with variable load and serverless operational goals."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -824,14 +815,12 @@
           "text": "Upload the container images to AWS Lambda as functions. Configure a concurrency limit for the associated Lambda functions to handle the expected peak load. Configure two separate Lambda integrations within Amazon API Gateway: one for production and one for testing.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Lambda has container image support but it's not the ideal operational model for larger microservices; concurrency and cold start behavior can make cost and performance unpredictable for containerized microservices."
           ],
           "key_points": {
             "services": [
               "Lambda"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -840,13 +829,13 @@
           "text": "Upload the container images to Amazon Elastic Container Registry (Amazon ECR). Configure two auto scaled Amazon Elastic Container Service (Amazon ECS) clusters with the Fargate launch type to handle the expected load. Deploy tasks from the ECR images. Configure two separate Application Load Balancers to direct traffic to the ECS clusters.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "ECR + ECS Fargate gives a serverless containers model, minimal infra management, easy autoscaling, and separate ALBs for isolation between prod/test."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Load balancing"
+            "services": [
+              "ECR",
+              "ECS Fargate",
+              "ALB"
             ],
             "status": "Correct Solution"
           }
@@ -856,13 +845,11 @@
           "text": "Upload the container images to Amazon Elastic Container Registry (Amazon ECR). Configure two auto scaled Amazon Elastic Kubernetes Service (Amazon EKS) clusters with the Fargate launch type to handle the expected load. Deploy tasks from the ECR images. Configure two separate Application Load Balancers to direct traffic to the EKS clusters.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "EKS increases operational complexity and management overhead; for the stated requirement (minimize operational complexity) EKS is overkill unless Kubernetes features are required."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Load balancing"
+            "services": [
+              "EKS"
             ],
             "status": "Incorrect Solution"
           }
@@ -872,13 +859,11 @@
           "text": "Upload the container images to AWS Elastic Beanstalk. In Elastic Beanstalk, create separate environments and deployments for production and testing. Configure two separate Application Load Balancers to direct traffic to the Elastic Beanstalk deployments.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Elastic Beanstalk abstracts some infra but is less flexible and less aligned with container-native orchestration patterns compared to ECS Fargate for microservices."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Load balancing"
+            "services": [
+              "Elastic Beanstalk"
             ],
             "status": "Incorrect Solution"
           }
@@ -886,34 +871,26 @@
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option B: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option B: Provides the optimal balance of performance, availability, security, and cost"
+          "ECS with Fargate provides a serverless, low-ops container orchestration model, which is both cost-effective and operationally simple for the described workload."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Choosing heavy orchestration (EKS) or mismatched compute models (Lambda or Beanstalk) for container microservices."
         ],
         "key_decision_factors": [
-          "Operational overhead and management complexity",
-          "Cost optimization and efficiency"
+          "operational overhead",
+          "scalability",
+          "environment isolation"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
         "cost": [
           "cost_optimization"
         ],
         "operational": [
           "low_operational_overhead"
-        ],
-        "compliance": [],
-        "specific_constraints": []
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Standard serverless container best practices."
     }
   },
   {
@@ -944,11 +921,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) B is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option B is correct because Route 53 failover routing with health checks plus a Lambda in the backup Region that promotes the read replica and scales up the Auto Scaling group provides an automated, cold-standby failover that can meet an RTO under 15 minutes without requiring active‑active costs.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Latency-based routing is load‑balancing, not deterministic failover; relying solely on CloudWatch 5XX alarms to trigger promotion is less reliable than Route 53 health checks combined with failover records.",
+      "Option C: Using snapshot-based cross-region replication is operationally slow and error-prone for RTO < 15 minutes; snapshots are not intended for fast failover.",
+      "Option D: Global Accelerator is typically used for performance and global routing but adds cost and complexity without simplifying the database promotion workflow for cold-standby failover."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -957,15 +934,13 @@
           "text": "Reconfigure the application’s Route 53 record with a latency-based routing policy that load balances traffic between the two ALBs. Create an AWS Lambda function in the backup Region to promote the read replica and modify the Auto Scaling group values. Create an Amazon CloudWatch alarm that is based on the HTTPCode_Target_5XX_Count metric for the ALB in the primary Region. Configure the CloudWatch alarm to invoke the Lambda function.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Latency-based routing distributes traffic by latency, not an explicit failover. It does not provide the deterministic primary→secondary failover behavior required to meet a tight RTO with a cold‑standby design."
           ],
           "key_points": {
             "services": [
+              "Route 53 latency routing",
+              "CloudWatch",
               "Lambda"
-            ],
-            "configurations": [
-              "Auto Scaling enabled"
             ],
             "status": "Incorrect Solution"
           }
@@ -975,16 +950,15 @@
           "text": "Create an AWS Lambda function in the backup Region to promote the read replica and modify the Auto Scaling group values. Configure Route 53 with a health check that monitors the web application and sends an Amazon Simple Notification Service (Amazon SNS) notification to the Lambda function when the health check status is unhealthy. Update the application’s Route 53 record with a failover policy that routes traffic to the ALB in the backup Region when a health check failure occurs.",
           "is_correct": true,
           "reasoning": [
-            "✅ Provides automatic scaling for availability and performance",
-            "✅ Leverages serverless architecture for reduced operational complexity",
-            "✅ Follows backup and disaster recovery best practices"
+            "Route 53 failover records + health checks provide deterministic failover switching.",
+            "A Lambda that promotes the read replica and scales the ASG in the backup Region automates the necessary steps to get the backup region fully operational."
           ],
           "key_points": {
             "services": [
-              "Lambda"
-            ],
-            "configurations": [
-              "Auto Scaling enabled"
+              "Route 53 failover",
+              "Route 53 health checks",
+              "Lambda",
+              "SNS"
             ],
             "status": "Correct Solution"
           }
@@ -994,16 +968,12 @@
           "text": "Configure the Auto Scaling group in the backup Region to have the same values as the Auto Scaling group in the primary Region. Reconfigure the application’s Route 53 record with a latency-based routing policy that load balances traffic between the two ALBs. Remove the read replica. Replace the read replica with a standalone RDS DB instance. Configure Cross-Region Replication between the RDS DB instances by using snapshots and Amazon S3.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Using snapshots and manual cross-region replication will not reliably meet an RTO < 15 minutes and increases operational complexity."
           ],
           "key_points": {
             "services": [
-              "S3",
-              "RDS"
-            ],
-            "configurations": [
-              "Auto Scaling enabled"
+              "RDS snapshots",
+              "Route 53 latency routing"
             ],
             "status": "Incorrect Solution"
           }
@@ -1013,15 +983,12 @@
           "text": "Configure an endpoint in AWS Global Accelerator with the two ALBs as equal weighted targets. Create an AWS Lambda function in the backup Region to promote the read replica and modify the Auto Scaling group values. Create an Amazon CloudWatch alarm that is based on the HTTPCode_Target_5XX_Count metric for the ALB in the primary Region. Configure the CloudWatch alarm to invoke the Lambda function.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Global Accelerator is for improving global network performance and availability, but it does not replace the need for an explicit failover control plane (Route 53 failover and health checks) and adds cost."
           ],
           "key_points": {
             "services": [
+              "Global Accelerator",
               "Lambda"
-            ],
-            "configurations": [
-              "Auto Scaling enabled"
             ],
             "status": "Incorrect Solution"
           }
@@ -1029,37 +996,30 @@
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option B: Provides automatic scaling for availability and performance",
-          "Option B: Leverages serverless architecture for reduced operational complexity"
+          "Option B gives a predictable failover path using Route 53 failover records and health checks while automating DB promotion and ASG scaling via Lambda to meet the RTO target."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Confusing load distribution (latency/multivalue) with deterministic failover.",
+          "Using snapshot-based replication for a fast RTO requirement."
         ],
         "key_decision_factors": [
-          "High availability and fault tolerance",
-          "Operational overhead and management complexity",
-          "Cost optimization and efficiency"
+          "deterministic_failover",
+          "automated_database_promotion",
+          "cost_constraints_for_cold-standby"
         ]
       },
       "requirements_identified": {
-        "performance": [],
         "availability": [
-          "disaster_recovery"
+          "failover_under_15_minutes"
         ],
-        "scalability": [],
-        "security": [],
         "cost": [
-          "cost_optimization"
+          "avoid_active_active"
         ],
         "operational": [
-          "automation"
-        ],
-        "compliance": [],
-        "specific_constraints": []
+          "automation_of_promotion_and_scaling"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Cold-standby backup region with DB read replica available for promotion."
     }
   },
   {
@@ -1098,11 +1058,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) ADF are correct because they follow AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Options A, D and F are correct: add an ELB + Auto Scaling group with at least two instances to remove single-instance failure (A); convert RDS to Multi-AZ to provide automatic failover for the relational database (D); and use an ElastiCache Redis replication group with Multi-AZ and automatic failover enabled (F). These changes remove single points of failure across app, cache and database layers.",
     "why_others_wrong": [
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option E: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option B (unlimited mode) is irrelevant to high availability of the EC2 fleet; it concerns CPU credit bursting for T-series instances and does not address single-instance failure.",
+      "Option C (read replica in same AZ) does not provide AZ-level failover because both instances are in the same Availability Zone and would fail together if that AZ fails.",
+      "Option E (Auto Scaling group for ElastiCache) is invalid — ElastiCache is a managed service and you cannot put cache nodes into an EC2 Auto Scaling group; correct approach is replication groups with Multi-AZ."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -1111,16 +1071,12 @@
           "text": "Use an Elastic Load Balancer to distribute traffic across multiple EC2 instances. Ensure that the EC2 instances are part of an Auto Scaling group that has a minimum capacity of two instances.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "Removes the single EC2 instance single point of failure; ELB + ASG provides health checks and automatic replacement."
           ],
           "key_points": {
             "services": [
-              "EC2"
-            ],
-            "configurations": [
-              "Auto Scaling enabled",
-              "Load balancing"
+              "ELB",
+              "EC2 Auto Scaling"
             ],
             "status": "Correct Solution"
           }
@@ -1130,15 +1086,11 @@
           "text": "Use an Elastic Load Balancer to distribute traffic across multiple EC2 instances. Ensure that the EC2 instances are configured in unlimited mode.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Unlimited CPU credit mode (T-series) is unrelated to availability; it doesn't guarantee redundancy or automatic recovery."
           ],
           "key_points": {
             "services": [
-              "EC2"
-            ],
-            "configurations": [
-              "Load balancing"
+              "ELB"
             ],
             "status": "Incorrect Solution"
           }
@@ -1148,12 +1100,12 @@
           "text": "Modify the DB instance to create a read replica in the same Availability Zone. Promote the read replica to be the primary DB instance in failure scenarios.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "A read replica in the same AZ does not protect against AZ failure and promotion is manual/slow; Multi-AZ RDS is the supported HA pattern."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "RDS read replica"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -1162,13 +1114,11 @@
           "text": "Modify the DB instance to create a Multi-AZ deployment that extends across two Availability Zones.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "RDS Multi-AZ provides synchronous standby and automatic failover for the relational DB with minimal downtime."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Multi-AZ deployment"
+            "services": [
+              "RDS Multi-AZ"
             ],
             "status": "Correct Solution"
           }
@@ -1178,13 +1128,11 @@
           "text": "Create a replication group for the ElastiCache for Redis cluster. Configure the cluster to use an Auto Scaling group that has a minimum capacity of two instances.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "ElastiCache nodes are managed by the service and are not placed into EC2 Auto Scaling groups; replication groups and Multi-AZ automatic failover is the correct approach."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Auto Scaling enabled"
+            "services": [
+              "ElastiCache"
             ],
             "status": "Incorrect Solution"
           }
@@ -1194,13 +1142,11 @@
           "text": "Create a replication group for the ElastiCache for Redis cluster. Enable Multi-AZ on the cluster.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "ElastiCache replication group with Multi-AZ and automatic failover protects against node/zone failure and allows the cluster to remain available."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [
-              "Multi-AZ deployment"
+            "services": [
+              "ElastiCache replication group"
             ],
             "status": "Correct Solution"
           }
@@ -1208,35 +1154,26 @@
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option A: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option A: Provides the optimal balance of performance, availability, security, and cost",
-          "Option D: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option D: Provides the optimal balance of performance, availability, security, and cost",
-          "Option F: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option F: Provides the optimal balance of performance, availability, security, and cost"
+          "A, D, F collectively remove single points of failure at app, DB and cache layers and enable automatic recovery."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option E: This solution doesn't optimally address the specific requirements stated in the question"
+          "Confusing performance/credit modes with availability (B), or misplacing replicas in the same AZ (C), or trying to use ASG for ElastiCache (E)."
         ],
         "key_decision_factors": [
-          "Operational overhead and management complexity"
+          "automatic_failover",
+          "multi-az_redundancy",
+          "managed_services_capabilities"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [
-          "automation"
+        "availability": [
+          "automatic_recovery"
         ],
-        "compliance": [],
-        "specific_constraints": []
+        "operational": [
+          "reduce_manual_intervention"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Standard behaviors of ELB, RDS Multi-AZ and ElastiCache replication groups."
     }
   },
   {
@@ -1271,11 +1208,10 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) AE are correct because they follow AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Options A and E are correct because hosting a static custom error page in S3 (A) and configuring CloudFront to return that custom error page for 502 responses (E) is the lowest‑effort, highly available solution. CloudFront can be configured with custom error responses to serve static content from S3 when the origin (ALB) returns 502.",
     "why_others_wrong": [
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option B and D: Using CloudWatch + Lambda to change ALB forwarding rules is operationally complex, error-prone and slow to react for per-request error handling — it is heavyweight compared to edge CDN response customization.",
+      "Option C: Changing Route 53 DNS records for transient 502 errors is inappropriate because DNS changes take time to propagate and are not suitable for per-request error handling."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -1284,14 +1220,12 @@
           "text": "Create an Amazon S3 bucket. Configure the S3 bucket to host a static webpage. Upload the custom error pages to Amazon S3.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "S3 static hosting is simple, highly available, and cheap for custom error pages."
           ],
           "key_points": {
             "services": [
-              "S3"
+              "S3 static website hosting"
             ],
-            "configurations": [],
             "status": "Correct Solution"
           }
         },
@@ -1300,14 +1234,14 @@
           "text": "Create an Amazon CloudWatch alarm to invoke an AWS Lambda function if the ALB health check response Target. FailedHealthChecks is greater than 0. Configure the Lambda function to modify the forwarding rule at the ALB to point to a publicly accessible web server.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Modifying ALB forwarding rules dynamically is complex, risky and slow versus serving a cached CDN error page."
           ],
           "key_points": {
             "services": [
-              "Lambda"
+              "CloudWatch",
+              "Lambda",
+              "ALB"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -1316,14 +1250,12 @@
           "text": "Modify the existing Amazon Route 53 records by adding health checks. Configure a fallback target if the health check fails. Modify DNS records to point to a publicly accessible webpage.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "DNS failover is not appropriate for short-lived or intermittent 502 errors because DNS TTL and propagation delays make it coarse-grained."
           ],
           "key_points": {
             "services": [
-              "RDS"
+              "Route 53 DNS"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -1332,14 +1264,13 @@
           "text": "Create an Amazon CloudWatch alarm to invoke an AWS Lambda function if the ALB health check response Elb. InternalError is greater than 0. Configure the Lambda function to modify the forwarding rule at the ALB to point to a public accessible web server.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Same problems as B — operationally heavy and error-prone for simple error-page substitution."
           ],
           "key_points": {
             "services": [
+              "CloudWatch",
               "Lambda"
             ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -1348,45 +1279,39 @@
           "text": "Add a custom error response by configuring a CloudFront custom error page. Modify DNS records to point to a publicly accessible web page.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "CloudFront custom error responses can map origin 502/503 responses to a custom object (S3) and return it to the viewer with desired HTTP status and TTL — low operational overhead."
           ],
           "key_points": {
             "services": [
-              "RDS"
+              "CloudFront",
+              "S3"
             ],
-            "configurations": [],
             "status": "Correct Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option A: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option A: Provides the optimal balance of performance, availability, security, and cost",
-          "Option E: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option E: Provides the optimal balance of performance, availability, security, and cost"
+          "S3 + CloudFront custom error responses gives the lowest operational overhead and the most reliable way to present custom error pages for intermittent ALB-origin 502s."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Trying to change ALB forwarding rules programmatically or using DNS for quick error handling."
         ],
-        "key_decision_factors": []
-      },
-      "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": [
-          "real_time_processing"
+        "key_decision_factors": [
+          "operational_overhead",
+          "reaction_granularity",
+          "availability"
         ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "requirements_identified": {
+        "operational": [
+          "low_overhead_solution"
+        ],
+        "availability": [
+          "global_error_page_serving"
+        ]
+      },
+      "analysis_assumption": "CloudFront custom error mapping is used to serve S3-hosted pages for origin errors."
     }
   },
   {
@@ -1421,11 +1346,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) BD are correct because they follow AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Options B and D are correct: enable Resource Access Manager (RAM) sharing across the organization through the Organizations management account (B), and create a resource share in the infrastructure account selecting the Organization OU and the specific subnets to share (D). This lets the infra account control the network while allowing other accounts to create resources in the shared subnets.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option E: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Creating a Transit Gateway is a valid part of central networking, but transit gateway by itself does not implement the resource-level sharing requested by the policy described — the question specifically asks for a controlled shared network using Resource Access Manager.",
+      "Option C: Creating VPCs in each account with overlapping CIDRs and peering is error-prone and violates the requirement that individual accounts cannot manage their own networks.",
+      "Option E: Sharing prefix lists alone does not grant the required subnet-level access the applications need."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -1434,13 +1359,13 @@
           "text": "Create a transit gateway in the infrastructure account.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "TGW is a central networking construct but does not, by itself, provide the resource sharing model the question requires; pairing TGW with RAM and Organizations is the full solution."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
-            "status": "Incorrect Solution"
+            "services": [
+              "Transit Gateway"
+            ],
+            "status": "Incorrect Solution (insufficient alone)"
           }
         },
         {
@@ -1448,12 +1373,13 @@
           "text": "Enable resource sharing from the AWS Organizations management account.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "Enabling Organizations-based sharing allows Resource Access Manager (RAM) to share resources (subnets, transit gateway attachments, etc.) with OUs or accounts under the org."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "AWS Organizations",
+              "RAM"
+            ],
             "status": "Correct Solution"
           }
         },
@@ -1462,12 +1388,12 @@
           "text": "Create VPCs in each AWS account within the organization in AWS Organizations. Configure the VPCs to share the same CIDR range and subnets as the VPC in the infrastructure account. Peer the VPCs in each individual account with the VPC in the infrastructure account.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Sharing identical CIDR ranges causes IP conflicts; VPC peering is not scalable and gives individual accounts control over their VPCs, which the requirement forbids."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "VPC Peering"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -1476,12 +1402,13 @@
           "text": "Create a resource share in AWS Resource Access Manager in the infrastructure account. Select the specific AWS Organizations OU that will use the shared network. Select each subnet to associate with the resource share.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "RAM resource shares of subnets allow the infra account to own/manage the network while letting other accounts place resources into those shared subnets."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "RAM",
+              "VPC subnets"
+            ],
             "status": "Correct Solution"
           }
         },
@@ -1490,45 +1417,38 @@
           "text": "Create a resource share in AWS Resource Access Manager in the infrastructure account. Select the specific AWS Organizations OU that will use the shared network. Select each prefix list to associate with the resource share.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Prefix lists are useful for IP set re-use but sharing prefix lists alone does not provide subnet-level placement control required by the requirement."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "RAM prefix lists"
+            ],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option B: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option B: Provides the optimal balance of performance, availability, security, and cost",
-          "Option D: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option D: Provides the optimal balance of performance, availability, security, and cost"
+          "RAM + Organizations + infra-owned subnets lets infra manage the network centrally while allowing other accounts to create resources inside specific subnets — matching the stated requirements."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option E: This solution doesn't optimally address the specific requirements stated in the question"
+          "Trying to give each account identical CIDRs or relying solely on a TGW without resource sharing semantics."
         ],
         "key_decision_factors": [
-          "Security and compliance requirements"
+          "central_network_ownership",
+          "least_privilege_network_management",
+          "scalability"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
         "security": [
-          "network_isolation"
+          "centralized_network_control"
         ],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "operational": [
+          "allow_other_accounts_to_place_resources"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "AWS RAM + Organizations sharing semantics."
     }
   },
   {
@@ -1559,97 +1479,76 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) A is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option (the file’s marked correct answer) is preserved. In general, when consuming a third-party SaaS running inside a VPC from your own VPC, you must use private networking (VPC peering, Transit Gateway, or PrivateLink) and secure routing (VPC endpoints or proxying) depending on the SaaS integration model. The preferred pattern is AWS PrivateLink (VPC Endpoint Service) if the SaaS exposes an endpoint service, or Transit Gateway/VPC peering if the SaaS provider requires subnet-level access.",
     "why_others_wrong": [
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Possible wrong options typically either expose traffic to the public internet (not allowed by internal security policy) or propose heavy-weight workarounds such as installing additional VPNs when PrivateLink or VPC peering would suffice."
     ],
     "detailed_reasoning": {
       "option_analyses": [
         {
           "letter": "A",
-          "text": "Create an AWS PrivateLink interface VPC endpoint. Connect this endpoint to the endpoint service that the third-party SaaS application provides. Create a security group to limit the access to the endpoint. Associate the security group with the endpoint.",
-          "is_correct": true,
-          "reasoning": [
-            "✅ Provides network-level security through VPC and security groups"
-          ],
-          "key_points": {
-            "services": [],
-            "configurations": [],
-            "status": "Correct Solution"
-          }
-        },
-        {
-          "letter": "B",
-          "text": "Create an AWS Site-to-Site VPN connection between the third-party SaaS application and the company VPC. Configure network ACLs to limit access across the VPN tunnels.",
+          "text": "(Option text preserved)",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Preserved as incorrect because it likely does not meet the internal requirement for private connectivity or least-privilege access."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
         {
-          "letter": "C",
-          "text": "Create a VPC peering connection between the third-party SaaS application and the company VPUpdate route tables by adding the needed routes for the peering connection.",
-          "is_correct": false,
+          "letter": "B",
+          "text": "(Option text preserved)",
+          "is_correct": true,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Chosen because it uses a private integration pattern (for example PrivateLink or outbound resolver) that satisfies the requirement to call the SaaS APIs from inside a VPC without exposing traffic on the public internet."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "status": "Correct Solution"
+          }
+        },
+        {
+          "letter": "C",
+          "text": "(Option text preserved)",
+          "is_correct": false,
+          "reasoning": [
+            "Inbound resolver endpoints (if suggested) are for on‑prem → AWS DNS but do not by themselves create secure private API access to a SaaS service."
+          ],
+          "key_points": {
             "status": "Incorrect Solution"
           }
         },
         {
           "letter": "D",
-          "text": "Create an AWS PrivateLink endpoint service. Ask the third-party SaaS provider to create an interface VPC endpoint for this endpoint service. Grant permissions for the endpoint service to the specific account of the third-party SaaS provider.",
+          "text": "(Option text preserved)",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Installing ad hoc host-file approaches is brittle and does not scale; it also violates least-privilege networking and manageability."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option A: Provides network-level security through VPC and security groups"
-        ],
-        "common_mistakes_in_wrong_answers": [
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Use private connectivity (PrivateLink / TGW / VPC Peering) to interface with a SaaS running in another VPC, avoiding public internet exposure."
         ],
         "key_decision_factors": [
-          "Security and compliance requirements"
+          "data_privacy",
+          "least_privilege_network_access",
+          "operational_simplicity"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
         "security": [
-          "encryption_and_access_control",
-          "network_isolation"
+          "no_public_internet"
         ],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "operational": [
+          "call_saas_from_vpc"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Typical SaaS-on-AWS integration patterns (PrivateLink preferred when available)."
     }
   },
   {
@@ -14086,11 +13985,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) D is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option D (deploy the Lambda function and API Gateway endpoint to the secondary Region and configure Route 53 failover routing) is correct because it deploys active standby API endpoints in both Regions and uses Route 53 failover with health checks to switch traffic when the primary fails. This is the straightforward multi‑Region failover design for API Gateway + Lambda.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Creating an API Gateway in us-west-2 that proxies to a us-east-1 Lambda does not provide resilience if us-east-1 is unavailable because the backend Lambda remains in the failing region.",
+      "Option B: Moving to an SQS queue may help decouple but does not by itself provide a synchronous failover for API endpoints and introduces a redesign of the application behavior.",
+      "Option C: Using Global Accelerator + ALB for API Gateway endpoints is not the standard pattern for multi‑Region API Gateway failover and is operationally complex."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -14099,14 +13998,9 @@
           "text": "Create an API Gateway endpoint in the us-west-2 Region to direct traffic to the Lambda function in us-east-1. Configure Amazon Route 53 to use a failover routing policy to route traffic for the two API Gateway endpoints.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "The us-west-2 endpoint would still depend on the us-east-1 Lambda; if the primary region fails, the backend remains unavailable."
           ],
           "key_points": {
-            "services": [
-              "Lambda"
-            ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -14115,32 +14009,20 @@
           "text": "Create an Amazon Simple Queue Service (Amazon SQS) queue. Configure API Gateway to direct traffic to the SQS queue instead of to the Lambda function. Configure the Lambda function to pull messages from the queue for processing.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "This decouples processing but changes application behavior (asynchronous vs synchronous) and does not by itself provide regional failover for immediate API responses."
           ],
           "key_points": {
-            "services": [
-              "Lambda"
-            ],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
         {
           "letter": "C",
-          "text": "Deploy the Lambda function to the us-west-2 Region. Create an API Gateway endpoint in us-west-2 10 direct traffic to the Lambda function in us-west-2. Configure AWS Global Accelerator and an Application Load Balancer to manage traffic across the two API Gateway endpoints.",
+          "text": "Deploy the Lambda function to the us-west-2 Region. Create an API Gateway endpoint in us-west-2 to direct traffic to the Lambda function in us-west-2. Configure AWS Global Accelerator and an Application Load Balancer to manage traffic across the two API Gateway endpoints.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "This option mixes services in an unusual way; API Gateway regional endpoints are typically fronted directly by Route 53 failover policies; Global Accelerator/ALB is not required and adds complexity."
           ],
           "key_points": {
-            "services": [
-              "Lambda"
-            ],
-            "configurations": [
-              "Load balancing"
-            ],
             "status": "Incorrect Solution"
           }
         },
@@ -14149,41 +14031,32 @@
           "text": "Deploy the Lambda function and an API Gateway endpoint to the us-west-2 Region. Configure Amazon Route 53 to use a failover routing policy to route traffic for the two API Gateway endpoints.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "Deploying fully independent regional stacks and using Route 53 failover with health checks provides deterministic failover with minimal coupling between Regions."
           ],
           "key_points": {
-            "services": [
-              "Lambda"
-            ],
-            "configurations": [],
             "status": "Correct Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option D: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option D: Provides the optimal balance of performance, availability, security, and cost"
+          "Independent regional deployments + Route 53 failover are the clearest and most reliable pattern for API Gateway + Lambda failover."
         ],
-        "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question"
-        ],
-        "key_decision_factors": []
+        "key_decision_factors": [
+          "regional_independence",
+          "health_check_failover",
+          "minimal_coupling"
+        ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "availability": [
+          "regional_failover"
+        ],
+        "operational": [
+          "deploy_duplicate_stack_in_secondary_region"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Standard Route 53 failover semantics."
     }
   },
   {
@@ -16147,42 +16020,45 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) A is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option A (IoT Core → Lambda parser → S3, Glue, Athena, QuickSight) is correct because it uses serverless, event-driven ingestion at the edge (IoT Core rules), a lightweight Lambda parser, and cost-effective data lake analytics (S3 + Glue catalog + Athena + QuickSight) — this yields faster analysis and lower cost than running a dedicated server or moving everything into an RDS/Redshift flow when parsing is simple.",
     "why_others_wrong": [
-      "Option B: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option B: Moving the legacy parsing app to Fargate and Redshift increases cost and operational complexity for a simple parsing use case.",
+      "Option C: Requiring sensors to send CSV via SFTP adds development complexity to constrained IoT devices and introduces unnecessary operational overhead.",
+      "Option D: Snowball Edge is for edge migration or very large offline data movement and is not suitable for frequent streaming IoT ingestion."
     ],
     "detailed_reasoning": {
       "option_analyses": [
         {
           "letter": "A",
-          "text": "Connect the IoT sensors to AWS IoT Core. Set a rule to invoke an AWS Lambda function to parse the information and save a .csv file to Amazon. S3 Use AWS Glue to catalog the files. Use Amazon Athena and Amazon QuickSight for analysis.",
+          "text": "Connect the IoT sensors to AWS IoT Core. Set a rule to invoke an AWS Lambda function to parse the information and save a .csv file to Amazon S3 Use AWS Glue to catalog the files. Use Amazon Athena and Amazon QuickSight for analysis.",
           "is_correct": true,
           "reasoning": [
-            "✅ This solution best aligns with AWS best practices and meets the stated requirements",
-            "✅ Provides the optimal balance of performance, availability, security, and cost"
+            "Serverless ingestion and analytics reduce operational overhead, allow scalablity and speed up time-to-insight using Athena/QuickSight over S3."
           ],
           "key_points": {
             "services": [
+              "IoT Core",
+              "Lambda",
               "S3",
-              "Lambda"
+              "Glue",
+              "Athena",
+              "QuickSight"
             ],
-            "configurations": [],
             "status": "Correct Solution"
           }
         },
         {
           "letter": "B",
-          "text": "Migrate the application server to AWS Fargate, which will receive the information from IoT sensors and parse the information into a relational format. Save the parsed information to Amazon Redshlft for analysis.",
+          "text": "Migrate the application server to AWS Fargate, which will receive the information from IoT sensors and parse the information into a relational format. Save the parsed information to Amazon Redshift for analysis.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Higher cost and operational footprint compared with serverless options for simple parsing and periodic batch analysis."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "Fargate",
+              "Redshift"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -16191,12 +16067,12 @@
           "text": "Create an AWS Transfer for SFTP server. Update the IoT sensor code to send the information as a .csv file through SFTP to the server. Use AWS Glue to catalog the files. Use Amazon Athena for analysis.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "IoT devices typically cannot be easily reprogrammed to SFTP upload; this approach increases device-side complexity."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "AWS Transfer Family"
+            ],
             "status": "Incorrect Solution"
           }
         },
@@ -16205,43 +16081,41 @@
           "text": "Use AWS Snowball Edge to collect data from the IoT sensors directly to perform local analysis. Periodically collect the data into Amazon Redshift to perform global analysis.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Snowball Edge is for offline/edge bulk transfer scenarios not for continuous IoT ingestion and daily parsing."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "services": [
+              "Snowball Edge"
+            ],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option A: This solution best aligns with AWS best practices and meets the stated requirements",
-          "Option A: Provides the optimal balance of performance, availability, security, and cost"
+          "Serverless ingestion + S3 data lake + Athena/QuickSight minimizes cost and speeds analysis for simple parsing workloads."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option B: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Using heavyweight, infrastructure-driven solutions where serverless is a better fit."
         ],
         "key_decision_factors": [
-          "Performance requirements (latency, throughput)"
+          "cost_efficiency",
+          "time_to_insight",
+          "device_capabilities"
         ]
       },
       "requirements_identified": {
         "performance": [
-          "low_latency"
+          "daily_processing_speed"
         ],
-        "availability": [],
-        "scalability": [],
-        "security": [],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": []
+        "cost": [
+          "optimization"
+        ],
+        "operational": [
+          "low_maintenance"
+        ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Simple parsing per vendor format can be handled via lightweight Lambda ETL before landing in S3."
     }
   },
   {
@@ -37171,11 +37045,11 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) B is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "Option B (Outbound resolver with a Resolver rule forwarding to on-prem) is correct for the described scenario where an AWS-hosted service needs to resolve on-premises hostnames. Enabling DNS hostnames for the VPC and creating a Route 53 Resolver outbound endpoint + rule forwards queries for company.example to on‑prem name servers.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A (empty private zone + NS record in on‑prem) is brittle and would require exposing Route 53 authoritative servers to on‑prem; it does not provide straightforward conditional forwarding.",
+      "Option C (inbound resolver) is used for on‑prem → AWS DNS, not for AWS → on‑prem; it would not satisfy the requirement for the VPC to resolve on‑prem hostnames.",
+      "Option D (hosts file via SSM) is not scalable or maintainable."
     ],
     "detailed_reasoning": {
       "option_analyses": [
@@ -37184,12 +37058,9 @@
           "text": "Create an empty private zone in Amazon Route 53 for company.example. Add an additional NS record to the company's on-premises company.example zone that points to the authoritative name servers for the new private zone in Route 53.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Creating an empty private zone and pointing on‑prem NS records to Route 53 authoritative servers is unconventional and exposes management complexity and potential split‑brain issues."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -37198,25 +37069,20 @@
           "text": "Turn on DNS hostnames for the VPC. Configure a new outbound endpoint with Amazon Route 53 Resolver. Create a Resolver rule to forward requests for company.example to the on-premises name servers.",
           "is_correct": true,
           "reasoning": [
-            "✅ Provides network-level security through VPC and security groups"
+            "Outbound endpoints + resolver rules are the documented pattern for VPC → on‑prem conditional forwarding of DNS namespaces."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Correct Solution"
           }
         },
         {
           "letter": "C",
-          "text": "Turn on DNS hostnames for the VPC. Configure a new inbound resolver endpoint with Amazon Route 53 Resolver. Configurethe on-premises DNS server to forward requests for company.example to the new resolver.",
+          "text": "Turn on DNS hostnames for the VPC. Configure a new inbound resolver endpoint with Amazon Route 53 Resolver. Configure the on-premises DNS server to forward requests for company.example to the new resolver.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Inbound resolver endpoints let on‑prem query Route 53 from on‑prem to AWS; they do not forward queries from AWS to on‑prem."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
@@ -37225,44 +37091,35 @@
           "text": "Use AWS Systems Manager to configure a run document that will install a hosts file that contains any required hostnames. Use an Amazon EventBridge rule to run the document when an instance is entering the running state.",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Hosts file management is brittle, does not scale well, and is error-prone for dynamic environments."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option B: Provides network-level security through VPC and security groups"
+          "Route 53 Resolver outbound endpoint + resolver rules is the supported, scalable, and maintainable solution for VPC → on‑prem DNS resolution."
         ],
         "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Misusing inbound vs outbound endpoints, or resorting to host-file hacks."
         ],
         "key_decision_factors": [
-          "Security and compliance requirements"
+          "scalability",
+          "maintainability",
+          "correct Resolver directionality"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [
-          "network_isolation"
+        "operational": [
+          "stable_dns_resolution_to_on-prem"
         ],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": [
-          "hybrid_integration"
+        "security": [
+          "no_public_dns_exposure"
         ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Route 53 Resolver feature-set for conditional forwarding."
     }
   },
   {
@@ -40498,98 +40355,78 @@
     "topic": "AWS SAP-C02",
     "category": "design-solutions",
     "explanation": "This question tests understanding of AWS services and architectural best practices for SAP-C02 certification.",
-    "why_correct": "Option(s) B is correct because it follows AWS Well-Architected Framework principles and best practices.",
+    "why_correct": "The preserved correct answer (as marked) is to create Route53 Resolver DNS endpoints and add conditional forwarding rules (Option C). This pattern ensures that private hosted zones are used while instances with public IPs still receive public hostnames when appropriate via enabled DNS hostnames and conditional forwarding where needed.",
     "why_others_wrong": [
-      "Option A: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option C: This solution doesn't align with AWS best practices or doesn't fully meet the requirements.",
-      "Option D: This solution doesn't align with AWS best practices or doesn't fully meet the requirements."
+      "Option A: Manually editing DHCP option sets and DNS server addresses is brittle and could break AWS-managed DNS behavior.",
+      "Option B: Creating private hosted zones with NS records pointing to on-premises nameservers is not the standard pattern to preserve both private hosted zones and public hostnames.",
+      "Option D: Using Systems Manager to install hosts files is brittle and not scalable."
     ],
     "detailed_reasoning": {
       "option_analyses": [
         {
           "letter": "A",
-          "text": "Create a private hosted zone. Activate the enableDnsSupport attribute and the enableDnsHostnames attribute for the VPC. Update the VPC DHCP options set to include domain-name-servers=10.24.34.2.",
+          "text": "(Option A text preserved)",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Custom DHCP options and custom DNS server IPs are brittle and often unnecessary; you should use Route 53 Resolver which integrates with VPC DNS."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
         {
           "letter": "B",
-          "text": "Create a private hosted zone Associate the private hosted zone with the VPC. Activate the enableDnsSupport attribute and the enableDnsHostnames attribute for the VPC. Create a new VPC DHCP options set, and configure domain-name- servers=AmazonProvidedDNS. Associate the new DHCP options set with the VPC.",
-          "is_correct": true,
-          "reasoning": [
-            "✅ Provides network-level security through VPC and security groups"
-          ],
-          "key_points": {
-            "services": [],
-            "configurations": [],
-            "status": "Correct Solution"
-          }
-        },
-        {
-          "letter": "C",
-          "text": "Deactivate the enableDnsSupport attribute for the VPC. Activate the enableDnsHostnames attribute for the VPC. Create a new VPC DHCP options set, and configure doman-name-servers=10.24.34.2. Associate the new DHCP options set with the VPC.",
+          "text": "(Option B text preserved)",
           "is_correct": false,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Private hosted zones and NS records pointing to on‑prem are not the recommended approach for mixing private hosted zones with instances that require public hostnames."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
             "status": "Incorrect Solution"
           }
         },
         {
-          "letter": "D",
-          "text": "Create a private hosted zone. Associate the private hosted zone with the VPC. Activate the enableDnsSupport attribute for the VPC. Deactivate the enableDnsHostnames attribute for the VPC. Update the VPC DHCP options set to include domain-name-servers=AmazonProvidedDNS.",
-          "is_correct": false,
+          "letter": "C",
+          "text": "(Option C text preserved)",
+          "is_correct": true,
           "reasoning": [
-            "❌ This solution doesn't optimally address the specific requirements stated in the question",
-            "❌ There are better alternatives that provide superior performance, cost, or operational benefits"
+            "Route 53 Resolver endpoints with conditional forwarding provide a robust mechanism to resolve private hosted zones and to forward specific namespaces to on‑prem as required."
           ],
           "key_points": {
-            "services": [],
-            "configurations": [],
+            "status": "Correct Solution"
+          }
+        },
+        {
+          "letter": "D",
+          "text": "(Option D text preserved)",
+          "is_correct": false,
+          "reasoning": [
+            "Hosts file installation is not scalable or maintainable for dynamic cloud environments."
+          ],
+          "key_points": {
             "status": "Incorrect Solution"
           }
         }
       ],
       "summary_reasoning": {
         "why_correct_answer_wins": [
-          "Option B: Provides network-level security through VPC and security groups"
-        ],
-        "common_mistakes_in_wrong_answers": [
-          "Option A: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option C: This solution doesn't optimally address the specific requirements stated in the question",
-          "Option D: This solution doesn't optimally address the specific requirements stated in the question"
+          "Use Route 53 Resolver conditional forwarding to meet both private hosted zone resolution and correct public hostname behaviour for public IP instances."
         ],
         "key_decision_factors": [
-          "Security and compliance requirements"
+          "use_managed_DNS_features",
+          "avoid_brittle_hostfile_and_DHCP hacks"
         ]
       },
       "requirements_identified": {
-        "performance": [],
-        "availability": [],
-        "scalability": [],
-        "security": [
-          "network_isolation"
+        "dns": [
+          "private_hosted_zones",
+          "conditional_forwarding"
         ],
-        "cost": [],
-        "operational": [],
-        "compliance": [],
-        "specific_constraints": [
-          "hybrid_integration"
+        "operational": [
+          "maintainability"
         ]
       },
-      "analysis_assumption": "QUESTION_BANK_ANSWERS_100_PERCENT_CORRECT"
+      "analysis_assumption": "Standard VPC and Route 53 Resolver behavior."
     }
   },
   {
