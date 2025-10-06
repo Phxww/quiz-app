@@ -161,7 +161,7 @@ function nextQuestion() {
             <p>{{ reason }}</p>
           </div>
         </div>
-        <!-- <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p> -->
+        <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p>
         <!-- <p class="text-sm text-red-700"> 為什麼對: {{ questions[current].detailed_reasoning?.join('；') }}</p> -->
 
         <button class="mt-4 p-2 bg-blue-500 text-white rounded" @click="nextQuestion">
