@@ -201,6 +201,17 @@ function nextQuestion() {
         <h4 class="font-semibold text-left text-white">Q{{ index + 1 }}. {{ q.question }}</h4>
         <p class=" text-gray-400">你的答案: {{ examAnswers[index]?.answer || "未作答" }}</p>
         <p class=" text-gray-400">正確答案: {{ q.correct_answer }}</p>
+        <div class="text-sm text-yellow-400 text-left">⚡詳細解說:
+          <div v-for="(res, index) in q?.detailed_reasoning?.option_analyses" :key="index">
+            <p class="text-bold">
+              {{ res.letter }}.
+            </p>
+            <div v-for="(r, idx) in res.reasoning" :key="idx" class="ml-4">
+              <p> - {{ r }}</p>
+            </div>
+            ================================================
+          </div>
+        </div>
         <p class="text-sm text-gray-200">📘 解釋: {{ q.explanation }}</p>
       </div>
 
