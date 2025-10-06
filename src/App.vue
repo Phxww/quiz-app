@@ -143,13 +143,25 @@ function nextQuestion() {
       </div>
 
       <div v-if="showAnswer" class="mt-4 ">
-        <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p>
-        <p class="text-sm text-green-700 text-left mb-2">👉 為什麼正確: {{ questions[current].why_correct }}</p>
-        <p class="text-sm text-red-700 text-left">❌ 錯誤原因: 
+
+        <p class="text-sm text-green-500 text-left mb-2">👉 為什麼正確: {{ questions[current].why_correct }}</p>
+        <div class="text-sm text-yellow-400 text-left">⚡詳細解說:
+          <div v-for="(res, index) in questions[current]?.detailed_reasoning?.option_analyses" :key="index">
+            <p class="text-bold">
+              {{ res.letter }}.
+            </p>
+            <div v-for="(r, idx) in res.reasoning" :key="idx" class="ml-4">
+              <p>{{ r }}</p>
+            </div>
+            -----
+          </div>
+        </div>
+        <div class="text-sm text-red-700 text-left">❌ 錯誤原因:
           <div v-for="(reason, index) in questions[current].why_others_wrong" :key="index">
             <p>{{ reason }}</p>
           </div>
-        </p>
+        </div>
+        <!-- <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p> -->
         <!-- <p class="text-sm text-red-700"> 為什麼對: {{ questions[current].detailed_reasoning?.join('；') }}</p> -->
 
         <button class="mt-4 p-2 bg-blue-500 text-white rounded" @click="nextQuestion">
