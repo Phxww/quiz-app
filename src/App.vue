@@ -151,14 +151,15 @@ function nextQuestion() {
               {{ res.letter }}.
             </p>
             <div v-for="(r, idx) in res.reasoning" :key="idx" class="ml-4">
-              <p>{{ r }}</p>
+              <p> - {{ r }}</p>
             </div>
-            -----
+            ================================================
           </div>
         </div>
-        <div class="text-sm text-red-700 text-left">❌ 錯誤原因:
+        <div class="text-sm text-red-500 text-left">❌ 錯誤原因:
           <div v-for="(reason, index) in questions[current].why_others_wrong" :key="index">
-            <p>{{ reason }}</p>
+            <p> - {{ reason }}</p>
+            ================================================
           </div>
         </div>
         <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p>
