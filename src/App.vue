@@ -31,7 +31,7 @@ import HelloWorld from './components/HelloWorld.vue'
 
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 const questions = ref([])
 const allQuestions = ref([]) // 保留完整題庫
@@ -43,9 +43,17 @@ const mode = ref("practice") // "practice" or "exam"
 const examAnswers = ref([])  // 存放模擬考的作答
 const examSize = ref(10)     // 模擬考題數 (可變動)
 const randomMode = ref(true) // 是否隨機出題
+const questionRange = ref('questions_1.json') // 題庫範圍
 
 onMounted(async () => {
-  const res = await fetch('./questions.json')
+  const res = await fetch(`./${questionRange.value}`)
+  const data = await res.json()
+  allQuestions.value = data
+  resetPractice()
+})
+
+watch(questionRange, async (newRange) => {
+  const res = await fetch(`./${newRange}`)
   const data = await res.json()
   allQuestions.value = data
   resetPractice()
@@ -123,6 +131,20 @@ function nextQuestion() {
         <input type="checkbox" v-model="randomMode" @change="resetPractice" />
         隨機出題
       </label>
+      <select v-model="questionRange" name="q-list" id="q-list" class="p-2 border rounded text-white bg-gray-700">
+        <!-- <option value="1">-- choose an option --</option> -->
+        <option value="questions_1.json">1-50</option>
+        <option value="questions_51.json">51-100</option>
+        <option value="questions_101.json">101-150</option>
+        <option value="questions_151.json">151-200</option>
+        <option value="questions_201.json">201-250</option>
+        <option value="questions_251.json">251-300</option>
+        <option value="questions_301.json">301-350</option>
+        <option value="questions_351.json">351-400</option>
+        <option value="questions_401.json">401-450</option>
+        <option value="questions_451.json">451-500</option>
+        <option value="questions_500.json">500-579</option>
+      </select>
     </div>
 
     <!-- 練習模式 -->
@@ -163,6 +185,12 @@ function nextQuestion() {
           </div>
         </div>
         <p class="text-sm text-gray-400 text-left mb-2">📘 解釋: {{ questions[current].explanation }}</p>
+        <div class="text-sm text-red-500 text-left">:📖參考:
+          <div v-for="(reference, index) in questions[current].reference" :key="index">
+            <p> - <a :href="reference" target="_blank">{{reference}}</a></p>
+            ================================================
+          </div>
+        </div>
         <!-- <p class="text-sm text-red-700"> 為什麼對: {{ questions[current].detailed_reasoning?.join('；') }}</p> -->
 
         <button class="mt-4 p-2 bg-blue-500 text-white rounded" @click="nextQuestion">
@@ -214,6 +242,12 @@ function nextQuestion() {
           </div>
         </div>
         <p class="text-sm text-gray-200">📘 解釋: {{ q.explanation }}</p>
+        <div class="text-sm text-red-500 text-left">:📖參考:
+          <div v-for="(reference, index) in questions[current].reference" :key="index">
+            <p> - <a href="{{ reference }}" target="_blank">{{reference}}</a></p>
+            ================================================
+          </div>
+        </div>
       </div>
 
       <button class="mt-6 px-4 py-2 bg-blue-600 text-white rounded" @click="startExam">
